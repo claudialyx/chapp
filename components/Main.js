@@ -5,14 +5,14 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  Button
+  Button,
+  ActivityIndicator
 } from "react-native";
+import { Image } from "react-native-elements";
 import { ImagePicker } from "expo";
 import firebase from "firebase";
 import { storage } from "../Fire";
-
-let imageBase64 = "";
+import uuid from "react-native-uuid";
 
 class Main extends React.Component {
   state = {
@@ -42,17 +42,15 @@ class Main extends React.Component {
       base64: true
     });
     console.log("image:", result);
-    // this.handleImagePicked(result)
     if (!result.cancelled) {
-      //   // imageBase64 = result.base64;
       this.setState({ imageUrl: result.uri });
     }
   };
 
-  uploadImage = async imageuri => {
+  uploadImage = async () => {
     try {
       this.setState({ uploading: true });
-      uploadUrl = await uploadImageAsync(imageuri);
+      uploadUrl = await uploadImageAsync(this.state.imageUrl);
       this.setState({ uploadUrl });
     } catch (e) {
       console.log("Error uploading image:", e);
@@ -79,6 +77,7 @@ class Main extends React.Component {
         xhr.send(null); // no initial data
       });
 
+      // const ref = storage.ref().child('')
       const ref = storage.ref().child(uuid.v4());
       const snapshot = await ref.put(blob);
 
@@ -91,7 +90,8 @@ class Main extends React.Component {
   };
 
   render() {
-    let { name, imageUrl, uploadUrl } = this.state;
+    let { name, imageUrl, uploadUrl, uploading } = this.state;
+    // if (failed) return placeholderImg;
     return (
       <View>
         {/* <Text>Hello</Text> */}
@@ -102,19 +102,38 @@ class Main extends React.Component {
           </Text>
         </TouchableOpacity>
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.image} />
-        ) : null}
-        <TouchableOpacity style={styles.button}>
-          <Button title="Upload Image" onPress={this.uploadImage} />
-        </TouchableOpacity>
-        {uploadUrl ? null : (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.image}
+            PlaceholderContent={<ActivityIndicator />}
+          />
+        ) : uploadUrl ? (
           <Image
             source={{
               uri: uploadUrl
             }}
-            style={{ width: 200, height: 200 }}
+            style={styles.image}
+            PlaceholderContent={<ActivityIndicator />}
+          />
+        ) : (
+          <Image
+            // source={{ uri: "https://via.placeholder.com/150"}}
+            source={require("../assets/icons8-compact-camera-50.png")}
+            style={styles.imagePlaceholder}
           />
         )}
+        <TouchableOpacity style={styles.button}>
+          <Button title="Upload Image" onPress={this.uploadImage} />
+        </TouchableOpacity>
+        {/* {uploadUrl ? (
+          <Image
+            source={{
+              uri: uploadUrl
+            }}
+            style={styles.image}
+            PlaceholderContent={<ActivityIndicator />}
+          />
+        ) : null} */}
         <Text style={styles.title}>Enter your name:</Text>
         <TextInput
           onChangeText={this.onChangeText}
@@ -158,59 +177,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: offset
   },
   image: {
-    width: 200,
-    height: 200,
-    borderRadius: 200,
+    width: 150,
+    height: 150,
+    borderRadius: 150,
     display: "flex",
     justifyContent: "center",
     alignItems: "center"
+  },
+  imagePlaceholder: {
+    width: 150,
+    height: 150,
+    borderRadius: 150,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    resizeMode: "contain"
   }
 });
 export default Main;
-
-// //upload the image uri into firebase storage
-// uploadImage = () => {
-//   const { imageUrl } = this.state;
-//   console.log(imageUrl);
-//   // Create a reference to a location in our database where the images will be saved, in our case it’s /images
-//   // put() takes files via the JavaScript File and Blob APIs and uploads them to Cloud Storage.
-//   // put() and putString() return an UploadTask which can be used as a promise/use to manage & monitor upload status.
-//   const uploadTask = storage.ref(`images/${imageUrl}`).putString(imageBase64);
-//   // const uploadTask = storage.ref(`images/${imageUrl}`).put(imageUrl); //Firebase Storage: Invalid argument in `put` at index 0: Expected Blob or File.
-
-//   // Register three observers:
-//   // 1. 'state_changed' observer, called any time the state changes
-//   // 2. Error observer, called on failure
-//   // 3. Completion observer, called on successful completion
-//   uploadTask.on(
-//     "state_changed",
-//     snapshot => {
-//       // Observe state change events such as progress, pause, and resume
-//       // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-//       var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-//       console.log("Upload is " + progress + "% done");
-//       switch (snapshot.state) {
-//         case firebase.storage.TaskState.PAUSED: // or 'paused'
-//           console.log("Upload is paused");
-//           break;
-//         case firebase.storage.TaskState.RUNNING: // or 'running'
-//           console.log("Upload is running");
-//           break;
-//       }
-//     },
-//     //error observer
-//     error => {
-//       // Handle unsuccessful uploads
-//       console.log("upload error:", error);
-//     },
-//     //completion observer
-//     () => {
-//       // Handle successful uploads on complete
-//       // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-//       uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
-//         console.log("File available at", downloadURL);
-//         this.setState({ downloadUrl: downloadURL });
-//       });
-//     }
-//   );
-// };
